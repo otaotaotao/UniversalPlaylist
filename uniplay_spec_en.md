@@ -36,6 +36,7 @@ This philosophy should also be the yardstick for evaluating future features (aut
   - **Odesli (song.link)** — only handles a single track or album at a time, not playlists.
   - **playlister.cc / Spotlistr** — convert a plain tracklist into both Spotify and Apple Music playlists. Testing showed good matching accuracy, but **track order got scrambled** — worth noting as a cautionary example, likely caused by parallel search requests that were never re-sorted back into original order before writing.
 - Apple's own built-in "Transfer Music" feature (inside the Apple Music app) already lets someone save a playlist from Spotify and import it via Apple Music settings, for free, today. But it doesn't give you the "just send one link" experience.
+- Related project: Universal Playlist Format (UPF) (universalplaylist.stavros.io). A 2017 proposal for a playlist file format that stores multiple identifiers (file hash, URI, MusicBrainz ID, etc.) in priority order. The idea of "resolving through a prioritized list of identifiers" runs in the same direction as this project's ISRC/MBID design, but the only known implementation is a single conversion tool (pls2upl), and it seems to have stalled at Pre-alpha with no real ecosystem adoption. Noting it here as a record that someone else had a similar idea first.
 
 ## 2. Current architecture (mockup)
 
