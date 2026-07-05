@@ -210,9 +210,41 @@
     background: var(--seal); color: #fbf6ee; border: none;
     cursor: pointer; font-size: 13px; line-height:1;
   }
+
+  .in-app-warning{
+    display: none;
+    max-width: 560px;
+    margin: 0 auto 18px;
+    background: #f3e3da;
+    border: 1px solid #d9b7a3;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .in-app-warning p{
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .in-app-warning button{
+    background: var(--seal);
+    color: #fbf6ee;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Lora', serif;
+    font-size: 12.5px;
+    padding: 7px 16px;
+    cursor: pointer;
+  }
+  .in-app-warning.show{ display: block; }
 </style>
 </head>
 <body>
+<div id="inAppWarning" class="in-app-warning">
+  <p>今、アプリ内蔵のブラウザで開いています。曲の再生がうまく表示されないことがあるので、<b>右上や下の「…」から「Safari(または他のブラウザ)で開く」</b>を選んでみてください。</p>
+  <button onclick="copyLink()">リンクをコピーする</button>
+</div>
 <div class="sheet">
   <div class="seal"></div>
   <h1 id="plTitle"></h1>
@@ -268,6 +300,8 @@ function jsonp(url) {
   return new Promise((resolve, reject) => {
     const cbName = "uniplayCb_" + Math.random().toString(36).slice(2);
     const script = document.createElement("script");
+    const finalUrl = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
+    console.log("[UniPlay] JSONPリクエストURL:", finalUrl);
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error("timeout"));
@@ -284,7 +318,7 @@ function jsonp(url) {
       resolve(data);
     };
     script.onerror = () => { cleanup(); reject(new Error("script load error")); };
-    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
+    script.src = finalUrl;
     document.body.appendChild(script);
   });
 }
@@ -299,25 +333,7 @@ async function resolveTopHit(t) {
   const term = encodeURIComponent(`${t.title} ${t.artist} ${t.album}`);
   const apiUrl = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=jp`;
 
-  // 1. まずは素直にfetch
-  try {
-    const res = await fetch(apiUrl);
-    if (res.ok) {
-      const data = await res.json();
-      const hit = data.results && data.results[0];
-      if (hit && hit.trackViewUrl) {
-        console.log(`[UniPlay] fetchで解決: ${t.title} →`, hit.trackViewUrl);
-        return hit.trackViewUrl;
-      }
-      console.warn(`[UniPlay] fetchは成功したが該当曲なし: ${t.title}`);
-    } else {
-      console.warn(`[UniPlay] fetch失敗 (status ${res.status}): ${t.title}`);
-    }
-  } catch (e) {
-    console.warn(`[UniPlay] fetchでエラー(CORSの可能性): ${t.title}`, e);
-  }
-
-  // 2. ダメならJSONPで再挑戦
+  // iTunes Search APIは直接fetchするとCORSで毎回失敗すると確認できたため、JSONPのみを使う
   try {
     const data = await jsonp(apiUrl);
     const hit = data.results && data.results[0];
@@ -330,7 +346,7 @@ async function resolveTopHit(t) {
     console.warn(`[UniPlay] JSONPでもエラー: ${t.title}`, e);
   }
 
-  // 3. 両方だめなら検索結果ページへ(アルバム名込み)
+  // JSONPでもダメなら検索結果ページへ(アルバム名込み)
   console.warn(`[UniPlay] トップヒット解決を諦めて検索ページへ: ${t.title}`);
   return fallbackSearchUrl(t);
 }
@@ -430,7 +446,29 @@ const notes = {
   "夜間飛行（落下ダブバージョン）": "歩いた",
 };
 
+function isInAppBrowser() {
+  const ua = navigator.userAgent || "";
+  return /Instagram|FBAN|FBAV|Line\/|Twitter|TikTok|BytedanceWebview|MicroMessenger|Snapchat/i.test(ua);
+}
+
+function copyLink() {
+  const url = window.location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      alert("リンクをコピーしました。SafariやChromeを開いて貼り付けてください。");
+    }).catch(() => {
+      alert("コピーに失敗しました。このURLを手動でコピーしてください:\n" + url);
+    });
+  } else {
+    alert("このURLを手動でコピーしてください:\n" + url);
+  }
+}
+
 async function init() {
+  if (isInAppBrowser()) {
+    document.getElementById("inAppWarning").classList.add("show");
+  }
+
   document.getElementById("plTitle").textContent = playlistTitle;
   document.getElementById("plMessage").textContent = playlistMessage;
 
@@ -451,12 +489,13 @@ async function init() {
   }
   render();
 
-  tracks.forEach(async (t, i) => {
-    const url = await resolveTopHit(t);
+  for (let i = 0; i < tracks.length; i++) {
+    const url = await resolveTopHit(tracks[i]);
     tracks[i].url = url;
     tracks[i].resolved = true;
     render();
-  });
+    await new Promise((resolve) => setTimeout(resolve, 300)); // 詰まり防止に少し間隔を空ける
+  }
 }
 
 init();
