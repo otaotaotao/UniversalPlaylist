@@ -2,7 +2,7 @@
 
 ## 0. Motivation & Philosophy
 
-**Hand a playlist to someone using Apple Music, with as little friction as possible.** That's the baseline goal.
+**Hand a Spotify playlist to someone using Apple Music, with as little friction as possible.** That's the baseline goal.
 
 But this isn't meant to be just another format-conversion tool. What's actually in mind:
 
