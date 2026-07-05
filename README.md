@@ -1,8 +1,8 @@
-# UniPlay *(name still unsettled — see naming notes below)*
+# A Praylist *(working title — repo/code still under the old name `UniversalPlaylist` / `UniPlay`, see naming notes below)*
 
-A "postcard" for playlists — hand someone your Spotify playlist without cluttering their Apple Music library.
+Here come a few words — an intimate praylist, like a postcard, or a humble radio, like a diary.
 
-Most playlist-conversion tools treat sharing across platforms as a permanent library sync. This is trying to be something smaller and more personal: closer to sending a postcard, or leaving a short intimate radio-diary aside on each track, than to migrating a whole collection.
+That's the actual point of this project. Most playlist-conversion tools treat sharing across platforms as a permanent library sync. This is trying to be something smaller and more personal instead: a way to hand someone a playlist — with a short, DJ-style aside on each track if you want — without it piling up forever in their library.
 
 **Live mock-up:** https://otaotaotao.github.io/UniversalPlaylist/
 **Spec (English):** [uniplay_spec_en.md](./uniplay_spec_en.md)
@@ -24,7 +24,7 @@ Known walls hit along the way (details in the spec): Spotify's Feb 2026 API chan
 
 ## Naming notes
 
-The code and files are still under the placeholder name `UniPlay` / `Universal Playlists`. Current front-runners for an actual name: **Playlist Prayer**, **A Praylist for Us**. See the spec for the full list of candidates considered.
+Leaning toward **A Praylist** as the actual name now (the pray/play double meaning, without "Universal" — which risked echoing both Universal Music Group and an unrelated 2017 "Universal Playlist Format" project). The repo, file names, and JS variables are still on the old placeholder (`UniPlay` / `Universal Playlists`) for now; a full rename is a later cleanup, not a priority. See the spec for the fuller list of names considered along the way.
 
 ## License
 
