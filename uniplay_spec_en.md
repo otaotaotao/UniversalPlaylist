@@ -2,13 +2,14 @@
 
 ## 0. Motivation & Philosophy
 
-**Hand a Spotify playlist to someone using Apple Music, with as little friction as possible.** That's the baseline goal.
+**Hand a playlist to someone using Apple Music, with as little friction as possible.** That's the baseline goal.
 
 But this isn't meant to be just another format-conversion tool. What's actually in mind:
 
 - **Music-sharing that feels like a diary entry.** Not a permanent collection that piles up in someone's library, but something that flows through, gets listened to, and passes on. It shouldn't clutter the recipient's Apple Music library.
 - **A postcard-like feeling of sharing.** Not a cross-platform "sync" or "migration," but something as light and personal as sending a letter or a postcard.
 - That's why the design language leans on stationery, wax seals, and a "P.S." tone — this isn't decoration, it's the philosophy expressed visually.
+- **Addendum (a realization):** there's a pull toward adding a short comment to each track. This might not be just a feature request — it could be putting words to something more foundational: underneath the act of handing over a playlist, there may be a desire to **play at being an intimate, personal radio broadcaster.** Being able to leave a small note per track — why this one, how it should land — the way a DJ says a word or two between songs, might get closer to what this project is actually about.
 
 This philosophy should also be the yardstick for evaluating future features (auto playlist generation, other platform support, etc.). Any feature that's "convenient but makes things pile up permanently in the library" deserves a second look against this principle before it's added.
 
@@ -36,7 +37,7 @@ This philosophy should also be the yardstick for evaluating future features (aut
   - **Odesli (song.link)** — only handles a single track or album at a time, not playlists.
   - **playlister.cc / Spotlistr** — convert a plain tracklist into both Spotify and Apple Music playlists. Testing showed good matching accuracy, but **track order got scrambled** — worth noting as a cautionary example, likely caused by parallel search requests that were never re-sorted back into original order before writing.
 - Apple's own built-in "Transfer Music" feature (inside the Apple Music app) already lets someone save a playlist from Spotify and import it via Apple Music settings, for free, today. But it doesn't give you the "just send one link" experience.
-- Related project: Universal Playlist Format (UPF) (universalplaylist.stavros.io). A 2017 proposal for a playlist file format that stores multiple identifiers (file hash, URI, MusicBrainz ID, etc.) in priority order. The idea of "resolving through a prioritized list of identifiers" runs in the same direction as this project's ISRC/MBID design, but the only known implementation is a single conversion tool (pls2upl), and it seems to have stalled at Pre-alpha with no real ecosystem adoption. Noting it here as a record that someone else had a similar idea first.
+- **Related project: Universal Playlist Format (UPF)** (`universalplaylist.stavros.io`). A 2017 proposal for a playlist file format that stores multiple identifiers (file hash, URI, MusicBrainz ID, etc.) in priority order. The idea of "resolving through a prioritized list of identifiers" runs in the same direction as this project's ISRC/MBID design, but the only known implementation is a single conversion tool (`pls2upl`), and it seems to have stalled at Pre-alpha with no real ecosystem adoption. Noting it here as a record that someone else had a similar idea first.
 
 ## 2. Current architecture (mockup)
 
@@ -52,14 +53,17 @@ This philosophy should also be the yardstick for evaluating future features (aut
 ④ Deploy as a single static HTML file to GitHub Pages
         ↓
 ⑤ Recipient opens the page and taps a round icon button per track
-   → Apple Music opens to that song's page → they add it to their own library/playlist manually
+   → For resolved tracks, an embedded player (Apple's own embed.music.apple.com iframe)
+     slides up from the bottom of the page. Unresolved tracks still open a search page in a new tab
 ```
 
 ### 2.1 UI spec
 
 - Stationery / message-in-a-bottle styled design (cream paper, dashed dividers, wax-seal-style checkmarks)
-- Editable title and message field (currently placeholder text; will become free-form input once the editing feature ships)
-- Per track: title / artist (own line) / album in 〈 〉 (own line) / round icon button (tapping opens the direct link and auto-checks the track; manual un-checking is also possible)
+- Title, message, and per-track comments are all separated out into JS variables (`playlistTitle` / `playlistMessage` / the `notes` dictionary). Rewriting just these variables before distributing is enough to update them. **These are deliberately not editable text boxes for the recipient** — since this is a static site with no backend, anything the recipient typed wouldn't be saved and would vanish on reload. Editing is always framed as something done before distribution, not live.
+- Added a three-tier weighting system (large / medium / small) per track, set via a `weights` dictionary keyed by title. The small tier hides the album name and shrinks the button/checkbox (though the box itself keeps a constant size — only the visual size shrinks via `transform: scale()` — so that centers stay aligned across tiers)
+- Per track: title / artist (own line) / a short comment (set off with a left border so it doesn't get visually buried in the surrounding text). The album name was removed from the list view since it's already visible in the embedded player
+- The checkbox sits at the left edge of the row, the icon button (a broadcast-wave SVG icon) at the right edge. Tapping the button auto-checks the box (manual un-checking is still possible)
 - Progress is not persisted (resets on reload). **Worth noting: this isn't a technical shortcut so much as a deliberate choice that happens to align well with the "doesn't pile up" philosophy in section 0.**
 
 ### 2.2 Data structure (current)
@@ -71,7 +75,9 @@ This philosophy should also be the yardstick for evaluating future features (aut
   "album": "string",
   "url": "string | null",   // resolved direct link from the iTunes Search API
   "resolved": "boolean",
-  "done": "boolean"
+  "done": "boolean",
+  "note": "string | null",  // per-track comment (implemented)
+  "size": "\"large\" | \"medium\" | \"small\""  // weighting tier (implemented)
 }
 ```
 
@@ -90,7 +96,8 @@ ISRC/MBID aren't included yet since the CSV source data doesn't carry them (see 
 
 - [ ] Auto-generation from a pasted Spotify link (eliminating the manual CSV step in ①) — pending the "bring back OAuth" decision from section 3
 - [ ] Font/design preset picker
-- [ ] Editable title and message field (the current placeholder text was deliberately left as a preview of this feature)
+- [x] Editable title and message field (split into JS variables; deliberately not live-editable by the recipient — see section 2.1)
+- [x] **A short comment per track** (a DJ-style aside about each song — implemented)
 - [ ] Plain-text export in a customizable template format
 - [ ] Reverse version: Apple → Spotify (the same overall shape should largely carry over)
 - [ ] YouTube Music / Amazon Music support (needs individual research into each platform's auth/API situation first)
@@ -102,7 +109,7 @@ ISRC/MBID aren't included yet since the CSV source data doesn't carry them (see 
 - **Naming is still unsettled.** Current front-runners:
   - **Playlist Prayer**
   - **A Praylist for Us**
-  - (other candidates considered along the way: Praylist on its own, universal music drifter、tracks across the universe  etc. — the direction has generally leaned toward either the pray/play double meaning, or the drift/tide "doesn't accumulate" idea)
+  - (other candidates considered along the way: Praylist on its own, Driftlist, Tideline, Sealed, Song Post, "Dear Listener," etc. — the direction has generally leaned toward either the pray/play double meaning, or the drift/tide "doesn't accumulate" idea)
 - Code and file names will stay as `uniplay` for now, with a bulk rename once a name is settled.
 - Design motifs: stationery, message in a bottle, wax seal
 - Tone of voice: letter-like lightness, in the spirit of a "P.S."
