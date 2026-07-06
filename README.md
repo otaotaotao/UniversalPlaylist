@@ -24,7 +24,7 @@ Known walls hit along the way (details in the spec): Spotify's Feb 2026 API chan
 
 ## Naming notes
 
-Leaning toward **A Praylist** as the actual name now (the pray/play double meaning, without "Universal" — which risked echoing both Universal Music Group and an unrelated 2017 "Universal Playlist Format" project). The repo, file names, and JS variables are still on the old placeholder (`UniPlay` / `Universal Playlists`) for now; a full rename is a later cleanup, not a priority. See the spec for the fuller list of names considered along the way.
+Leaning toward **A Praylist** as the actual name now. The repo, file names, and JS variables are still on the old placeholder (`UniPlay` / `Universal Playlists`) for now; a full rename is a later cleanup, not a priority. See the spec for the fuller list of names considered along the way.
 
 ## License
 
