@@ -346,9 +346,9 @@ async function resolveTopHit(t) {
     console.warn(`[UniPlay] JSONPでもエラー: ${t.title}`, e);
   }
 
-  // JSONPでもダメなら検索結果ページへ(アルバム名込み)
-  console.warn(`[UniPlay] トップヒット解決を諦めて検索ページへ: ${t.title}`);
-  return fallbackSearchUrl(t);
+  // JSONPでもダメなら諦める(検索結果ページは埋め込みウィジェットとして使えないため null を返す)
+  console.warn(`[UniPlay] トップヒット解決を諦めます: ${t.title}`);
+  return null;
 }
 
 // 曲ごとの重み付け(大中小。指定なしは大=デフォルト)
@@ -402,8 +402,6 @@ function openEmbed(i, event) {
   if (!t.resolved || !t.url) return; // 未解決な曲は今まで通り検索ページを新しいタブで開く
   event.preventDefault();
   const embedUrl = t.url.replace("https://music.apple.com", "https://embed.music.apple.com");
-  console.log("[UniPlay] t.url:", t.url);
-  console.log("[UniPlay] embedUrl:", embedUrl);
   const panel = document.getElementById("nowPlaying");
   panel.innerHTML = `
     <div class="npInner">
@@ -492,8 +490,8 @@ async function init() {
 
   for (let i = 0; i < tracks.length; i++) {
     const url = await resolveTopHit(tracks[i]);
-    tracks[i].url = url;
-    tracks[i].resolved = true;
+    tracks[i].url = url;          // null のままなら埋め込み不可 → render()側で検索リンクにフォールバック
+    tracks[i].resolved = !!url;   // 実際のtrackViewUrlが取れた時だけtrue
     render();
     await new Promise((resolve) => setTimeout(resolve, 300)); // 詰まり防止に少し間隔を空ける
   }
