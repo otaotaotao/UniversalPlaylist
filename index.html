@@ -295,6 +295,26 @@ function parseCSVLine(line) {
 
 let tracks = [];
 
+// --- 手動URL上書き ---
+// iTunes Search APIでどうしても解決できない曲は、Apple Musicアプリ/サイトで
+// 自分で検索して曲の共有リンクをコピーし、ここに直接貼っておく。
+// (曲タイトルをキーにする。ここに載ってる曲はAPIを一切呼ばずこのURLを使う)
+const MANUAL_URL_OVERRIDES = {
+  // "曲のタイトル": "https://music.apple.com/jp/album/.../123456789?i=987654321",
+  "Poker Face":https://music.apple.com/us/song/poker-face/1440818665
+  "信濃路": "https://music.apple.com/us/song/shinano-trail/1747965046",
+"突然楽しくて呼吸を忘れて(1)": "https://music.apple.com/us/song/totsuzen-tanoshikute-kokyu-wo-wasurete1/1883923643",
+"ナイーヴな人々": "https://music.apple.com/us/song/naive-na-hitobito-instrumental/605266260",
+"Englishman In New York": "https://music.apple.com/us/song/englishman-in-new-york/1469165547",
+"Change The World (feat. Eric Clapton) - T.V.": "https://music.apple.com/us/song/change-the-world/250690115",
+"Baby's in Black": "https://music.apple.com/us/song/babys-in-black/1654701825",
+"Just For You": "https://music.apple.com/us/song/just-for-you/596520671",
+"IN THE FLIGHT": "https://music.apple.com/us/song/in-the-flight/1416932796",
+"MAGIC LOVE - REMIX": "https://music.apple.com/us/song/magic-love-remix/1416930172",
+};
+
+};
+
 // --- JSONP(fetchがCORSで失敗した場合の保険) ---
 function jsonp(url) {
   return new Promise((resolve, reject) => {
@@ -330,53 +350,48 @@ function fallbackSearchUrl(t) {
 }
 
 async function resolveTopHit(t) {
-  const term = encodeURIComponent(`${t.title} ${t.artist} ${t.album}`);
-  const apiUrl = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=jp`;
-  const maxAttempts = 3;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    // まずfetchを試す(script src読み込みと違い、musics://横取りの影響を受けない可能性があるため)
-    try {
-      const res = await fetch(apiUrl);
-      if (res.ok) {
-        const data = await res.json();
-        const hit = data.results && data.results[0];
-        if (hit && hit.trackViewUrl) {
-          console.log(`[UniPlay] fetchで解決(試行${attempt}): ${t.title} →`, hit.trackViewUrl);
-          return hit.trackViewUrl;
-        }
-        console.warn(`[UniPlay] fetchは成功したが該当曲なし: ${t.title}`);
-        return null; // 該当なし自体はリトライしても変わらないためここで終了
-      }
-    } catch (e) {
-      console.warn(`[UniPlay] fetch失敗(試行${attempt}): ${t.title}`, e);
-    }
-
-    // fetchがダメだった場合のみJSONPを試す
-    try {
-      const data = await jsonp(apiUrl);
-      const hit = data.results && data.results[0];
-      if (hit && hit.trackViewUrl) {
-        console.log(`[UniPlay] JSONPで解決(試行${attempt}): ${t.title} →`, hit.trackViewUrl);
-        return hit.trackViewUrl;
-      }
-      console.warn(`[UniPlay] JSONPは成功したが該当曲なし: ${t.title}`);
-      return null;
-    } catch (e) {
-      console.warn(`[UniPlay] JSONPでもエラー(試行${attempt}): ${t.title}`, e);
-    }
-
-    // musics://リダイレクトはAppleのバックエンド側の一時的な不調っぽいので、
-    // 少し待って別のエッジ/バックエンドに当たることを期待してリトライする
-    if (attempt < maxAttempts) {
-      const delay = attempt * 800;
-      console.warn(`[UniPlay] ${delay}ms待ってリトライ(${attempt}/${maxAttempts}): ${t.title}`);
-      await new Promise((r) => setTimeout(r, delay));
-    }
+  if (MANUAL_URL_OVERRIDES[t.title]) {
+    console.log(`[UniPlay] 手動上書きで解決: ${t.title} →`, MANUAL_URL_OVERRIDES[t.title]);
+    return MANUAL_URL_OVERRIDES[t.title];
   }
 
-  // 全試行がダメなら諦める(検索結果ページは埋め込みウィジェットとして使えないため null を返す)
-  console.warn(`[UniPlay] トップヒット解決を諦めます(${maxAttempts}回試行): ${t.title}`);
+  const term = encodeURIComponent(`${t.title} ${t.artist} ${t.album}`);
+  const apiUrl = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=jp`;
+
+  // まずfetchを試す(script src読み込みと違い、musics://横取りの影響を受けない可能性があるため)
+  try {
+    const res = await fetch(apiUrl);
+    if (res.ok) {
+      const data = await res.json();
+      const hit = data.results && data.results[0];
+      if (hit && hit.trackViewUrl) {
+        console.log(`[UniPlay] fetchで解決: ${t.title} →`, hit.trackViewUrl);
+        return hit.trackViewUrl;
+      }
+      console.warn(`[UniPlay] fetchは成功したが該当曲なし: ${t.title}`);
+      return null;
+    }
+  } catch (e) {
+    console.warn(`[UniPlay] fetch失敗: ${t.title}`, e);
+  }
+
+  // fetchがダメだった場合のみJSONPを試す
+  try {
+    const data = await jsonp(apiUrl);
+    const hit = data.results && data.results[0];
+    if (hit && hit.trackViewUrl) {
+      console.log(`[UniPlay] JSONPで解決: ${t.title} →`, hit.trackViewUrl);
+      return hit.trackViewUrl;
+    }
+    console.warn(`[UniPlay] JSONPは成功したが該当曲なし: ${t.title}`);
+  } catch (e) {
+    console.warn(`[UniPlay] JSONPでもエラー: ${t.title}`, e);
+  }
+
+  // 実測の結果、この段階でのリトライは一度も成功しなかった上にAPIのレート制限(429)を
+  // 誘発しただけだったため、リトライはせず素直に諦める(検索結果ページは埋め込みウィジェット
+  // として使えないため null を返す)
+  console.warn(`[UniPlay] トップヒット解決を諦めます: ${t.title}`);
   return null;
 }
 
