@@ -1,6 +1,6 @@
 # A Praylist *(working title — repo/code still under the old name `UniversalPlaylist` / `UniPlay`, see naming notes below)*
 
-Here come a few words — an intimate praylist, like a postcard, or a humble radio, like a diary.
+— an intimate praylist, like a postcard, or a humble radio, like a diary. —
 
 That's the actual point of this project. Most playlist-conversion tools treat sharing across platforms as a permanent library sync. This is trying to be something smaller and more personal instead: a way to hand someone a playlist — with a short, DJ-style aside on each track if you want — without it piling up forever in their library.
 
