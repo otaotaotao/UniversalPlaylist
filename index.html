@@ -402,6 +402,8 @@ function openEmbed(i, event) {
   if (!t.resolved || !t.url) return; // 未解決な曲は今まで通り検索ページを新しいタブで開く
   event.preventDefault();
   const embedUrl = t.url.replace("https://music.apple.com", "https://embed.music.apple.com");
+  console.log("[UniPlay] t.url:", t.url);
+  console.log("[UniPlay] embedUrl:", embedUrl);
   const panel = document.getElementById("nowPlaying");
   panel.innerHTML = `
     <div class="npInner">
