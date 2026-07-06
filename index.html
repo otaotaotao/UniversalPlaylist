@@ -407,8 +407,7 @@ function openEmbed(i, event) {
     <div class="npInner">
       <button class="npClose" onclick="closeEmbed()" aria-label="閉じる">×</button>
       <iframe src="${embedUrl}" height="150" frameborder="0"
-        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
-        allow="autoplay *; encrypted-media *;"
+        allow="autoplay *; encrypted-media *; clipboard-write *;"
         style="width:100%; overflow:hidden; border-radius:10px; background:transparent;"></iframe>
     </div>
   `;
