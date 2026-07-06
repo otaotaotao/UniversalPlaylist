@@ -332,39 +332,51 @@ function fallbackSearchUrl(t) {
 async function resolveTopHit(t) {
   const term = encodeURIComponent(`${t.title} ${t.artist} ${t.album}`);
   const apiUrl = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=jp`;
+  const maxAttempts = 3;
 
-  // まずfetchを試す(script src読み込みと違い、iOSのmusics://スキーム横取りの影響を受けない可能性があるため)
-  try {
-    const res = await fetch(apiUrl);
-    if (res.ok) {
-      const data = await res.json();
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // まずfetchを試す(script src読み込みと違い、musics://横取りの影響を受けない可能性があるため)
+    try {
+      const res = await fetch(apiUrl);
+      if (res.ok) {
+        const data = await res.json();
+        const hit = data.results && data.results[0];
+        if (hit && hit.trackViewUrl) {
+          console.log(`[UniPlay] fetchで解決(試行${attempt}): ${t.title} →`, hit.trackViewUrl);
+          return hit.trackViewUrl;
+        }
+        console.warn(`[UniPlay] fetchは成功したが該当曲なし: ${t.title}`);
+        return null; // 該当なし自体はリトライしても変わらないためここで終了
+      }
+    } catch (e) {
+      console.warn(`[UniPlay] fetch失敗(試行${attempt}): ${t.title}`, e);
+    }
+
+    // fetchがダメだった場合のみJSONPを試す
+    try {
+      const data = await jsonp(apiUrl);
       const hit = data.results && data.results[0];
       if (hit && hit.trackViewUrl) {
-        console.log(`[UniPlay] fetchで解決: ${t.title} →`, hit.trackViewUrl);
+        console.log(`[UniPlay] JSONPで解決(試行${attempt}): ${t.title} →`, hit.trackViewUrl);
         return hit.trackViewUrl;
       }
-      console.warn(`[UniPlay] fetchは成功したが該当曲なし: ${t.title}`);
-      return null; // 該当なしはJSONPを試しても同じ結果になるだけなのでここで終了
+      console.warn(`[UniPlay] JSONPは成功したが該当曲なし: ${t.title}`);
+      return null;
+    } catch (e) {
+      console.warn(`[UniPlay] JSONPでもエラー(試行${attempt}): ${t.title}`, e);
     }
-  } catch (e) {
-    console.warn(`[UniPlay] fetch失敗、JSONPにフォールバック: ${t.title}`, e);
+
+    // musics://リダイレクトはAppleのバックエンド側の一時的な不調っぽいので、
+    // 少し待って別のエッジ/バックエンドに当たることを期待してリトライする
+    if (attempt < maxAttempts) {
+      const delay = attempt * 800;
+      console.warn(`[UniPlay] ${delay}ms待ってリトライ(${attempt}/${maxAttempts}): ${t.title}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
 
-  // fetchがCORS等で失敗した場合のみJSONPを試す
-  try {
-    const data = await jsonp(apiUrl);
-    const hit = data.results && data.results[0];
-    if (hit && hit.trackViewUrl) {
-      console.log(`[UniPlay] JSONPで解決: ${t.title} →`, hit.trackViewUrl);
-      return hit.trackViewUrl;
-    }
-    console.warn(`[UniPlay] JSONPは成功したが該当曲なし: ${t.title}`);
-  } catch (e) {
-    console.warn(`[UniPlay] JSONPでもエラー: ${t.title}`, e);
-  }
-
-  // どちらもダメなら諦める(検索結果ページは埋め込みウィジェットとして使えないため null を返す)
-  console.warn(`[UniPlay] トップヒット解決を諦めます: ${t.title}`);
+  // 全試行がダメなら諦める(検索結果ページは埋め込みウィジェットとして使えないため null を返す)
+  console.warn(`[UniPlay] トップヒット解決を諦めます(${maxAttempts}回試行): ${t.title}`);
   return null;
 }
 
